@@ -1,0 +1,15 @@
+{% extends "layout" %}
+
+{% block title %}{% endblock %}
+
+{% block content %}
+    <ul>
+        {% for flash in flash_messages %}
+        <li><strong>{{flash.kind}}</strong><br/>{{flash.message}}</li>
+        {% endfor %}
+    </ul>
+    <ul>
+        <li><a href="/accounts/register">Register</a></li>
+        <li><a href="/accounts/login">Login</a></li>
+    </ul>
+{% endblock %}

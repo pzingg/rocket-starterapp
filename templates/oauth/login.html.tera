@@ -1,0 +1,36 @@
+{% extends "layout" %}
+
+{% block title %}Login with {{ form.provider | title }}{% endblock %}
+
+{% block content %}
+<h1>Login with {{ form.provider | title }}</h1>
+
+<p>
+    {% if form.email_hint %}
+    Enter your email adddress, and click the 'Login' button,
+    to log in using {{ form.provider | title }}.
+    {% else %}
+    Click the 'Login' button to log in using {{ form.provider | title }}.
+    {% endif %}
+</p>
+
+<form action="/oauth/login" method="POST" id="loginform">
+    {% if form.email_hint %}
+    <p>
+        <label for="email">Email:</label>
+        <input name="email" type="email" value="{{ form.email }}">
+        {% if errors and errors is containing("email") %}
+        {% for e in errors["email"] %}
+            <span>{{ e["message"] }}</span>
+        {% endfor %}
+        {% endif %}
+    </p>
+    {% else %}
+    <input name="email" type="hidden" value="">
+    {% endif %}
+
+    <input name="provider" type="hidden" value="{{ form.provider }}">
+    <input name="email_hint" type="hidden" value="{{ form.email_hint }}">
+    <button type="submit">Login with {{ form.provider | title }}</button>
+</form>
+{% endblock %}

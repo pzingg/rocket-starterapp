@@ -1,0 +1,6 @@
+[default]
+# secret_key must be 256-bit base64 or hex, from `openssl rand -base64 32`
+# secret_key = ""
+
+[default.databases.app_db]
+url = "postgres://postgres:postgres@localhost/rocket-starterapp"

@@ -1,0 +1,37 @@
+{% extends "layout" %}
+
+{% block title %}Login with {{ form.provider | title }}{% endblock %}
+
+{% block content %}
+<h1>Complete your login with {{ form.provider | title }}</h1>
+
+<p>Complete or edit the values below, then click the 'Complete login' button,
+    to log in using the {{ form.provider | title }} account
+    for '{{ form.username }}'.
+</p>
+
+<form action="/oauth/confirm" method="POST" id="linkform">
+    <p>
+        <label for="name">Name:</label>
+        <input name="name" type="text" value="{{ form.name }}">
+        {% if errors and errors is containing("name") %}
+        {% for e in errors["name"] %}
+            <span>{{ e["message"] }}</span>
+        {% endfor %}
+        {% endif %}
+    </p>
+    <p>
+        <label for="email">Email:</label>
+        <input name="email" type="email" value="{{ form.email }}">
+        {% if errors and errors is containing("email") %}
+        {% for e in errors["email"] %}
+            <span>{{ e["message"] }}</span>
+        {% endfor %}
+        {% endif %}
+    </p>
+
+    <input name="provider" type="hidden" value="{{ form.provider }}">
+    <input name="username" type="hidden" value="{{ form.username }}">
+    <button type="submit">Complete login with {{ form.provider | title }}</button>
+</form>
+{% endblock %}

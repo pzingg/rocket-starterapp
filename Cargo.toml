@@ -1,0 +1,63 @@
+[package]
+name = "rocket-starterapp"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "mainlib"
+path = "src/lib.rs"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = "1.0.56"
+base64-url = "1.4.13"
+chrono = { version = "0.4", features = ["serde"] }
+constant_time_eq = "0.1.5"
+djangohashers = { version = "1.5.3", default-features = false, features = ["with_pbkdf2"] }
+dotenv = "0.15.0"
+fancy-regex = "0.8"
+hmac = "0.11.0"
+lazy_static = "1.4.0"
+log = "0.4"
+oauth2 = { version = "4.1.0", optional = true }
+pretty_env_logger = "0.4.0"
+rand = "*"
+radix = "0.6"
+serde = "1.0"
+serde_json = "1.0"
+sha2 = "0.9"
+sqlx = { version = "0.5.9", default-features = false, features = ["runtime-tokio-rustls", "postgres", "chrono", "json", "macros", "uuid"] }
+tera = "1.5"
+thiserror = "1.0.30"
+# tokio = { version = "1.17", features = ["stream"] }
+tokio-stream = "0.1.8"
+ulid = { version = "0.4", features = ["uuid"] }
+uuid = { version = "0.8", features = ["serde", "v4"] }
+zxcvbn = "2.2.0"
+
+[dependencies.rocket]
+git = "https://github.com/SergioBenitez/Rocket.git"
+# rev = "c028d63e5ba275927424397fe9d67cfebdc138ec"
+branch = "master"
+features = ["json", "uuid", "secrets"]
+
+[dependencies.rocket_db_pools]
+git = "https://github.com/SergioBenitez/Rocket.git"
+# rev = "c028d63e5ba275927424397fe9d67cfebdc138ec"
+branch = "master"
+features = ["sqlx_postgres"]
+
+[dependencies.rocket_dyn_templates]
+git = "https://github.com/SergioBenitez/Rocket.git"
+# rev = "c028d63e5ba275927424397fe9d67cfebdc138ec"
+branch = "master"
+features = ["tera"]
+
+[features]
+default = ["oauth", "email-mock"]
+oauth = ["oauth2"]
+email-mock = []
+email-postmark = []
+email-sendgrid = []
+email-smtp = []

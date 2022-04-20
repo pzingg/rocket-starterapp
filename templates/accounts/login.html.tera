@@ -1,0 +1,45 @@
+{% extends "layout" %}
+
+{% block title %}Login{% endblock %}
+
+{% block content %}
+<h1>Login with password</h1>
+
+<form action="/accounts/login" method="POST" id="loginform">
+    {% if errors and errors is containing("form") %}
+    <p>
+    {% for e in errors["form"] %}
+        <span>{{ e["message"] }}</span>
+    {% endfor %}
+    </p>
+    {% endif %}
+
+    <p>
+        <label for="email">Email:</label>
+        <input name="email" type="email" value="{{ form.email }}">
+        {% if errors and errors is containing("email") %}
+        {% for e in errors["email"] %}
+            <span>{{ e["message"] }}</span>
+        {% endfor %}
+        {% endif %}
+    </p>
+    <p>
+        <label for="password">Password:</label>
+        <input name="password" type="password">
+        {% if errors and errors is containing("password") %}
+        {% for e in errors["password"] %}
+            <span>{{ e["message"] }}</span>
+        {% endfor %}
+        {% endif %}
+
+        <a href="/accounts/reset" title="Reset Your Password">Forgot your password?</a>
+    </p>
+    <button type="submit">Login</button>
+</form>
+
+<div>Or</div>
+
+<div><a class="button" type="button" href="/oauth/login/google">Login with Google</a></div>
+<div><a class="button" type="button" href="/oauth/login/github">Login with Github</a></div>
+
+{% endblock %}
