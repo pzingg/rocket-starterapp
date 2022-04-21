@@ -3,7 +3,6 @@ use std::sync::{Arc, RwLock};
 
 use anyhow::anyhow;
 use chrono::{Datelike, Utc};
-use log::debug;
 use serde::Serialize;
 use tera::{Context, Tera};
 
@@ -80,8 +79,6 @@ impl Email {
                 context.insert(k, &v);
             }
         }
-
-        debug!("Context for template {} : {:?}", template_name, &context);
 
         let body_html = engine
             .render(&(template_name.to_string() + ".html"), &context)

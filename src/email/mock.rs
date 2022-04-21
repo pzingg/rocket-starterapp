@@ -3,7 +3,6 @@ use std::{collections::HashMap, env, fmt};
 use anyhow::anyhow;
 use chrono::Utc;
 use fancy_regex::Regex;
-use log::debug;
 use serde_json;
 use uuid::Uuid;
 
@@ -60,7 +59,7 @@ impl Email {
         let re = Regex::new(&pattern).unwrap();
         let resp = match re.find(&self.to) {
             Ok(_) => {
-                debug!("Mocking hard bounce for mail to {}.", &self.to);
+                rocket::info!("Mocking hard bounce for mail to {}.", &self.to);
                 create_response(
                     200,
                     "OK",
@@ -85,7 +84,8 @@ impl Email {
         };
 
         if resp.status_code == 200 {
-            debug!("Mail sent to {} via mock.", &self.to);
+            rocket::info!("Mail sent to {} via mock:", &self.to);
+            rocket::info!("{}", self.body);
             Ok(())
         } else {
             Err(anyhow!(

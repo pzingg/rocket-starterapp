@@ -33,7 +33,7 @@ impl JobRun for SendWelcomeAccountEmail {
         let mut conn_result = state.pool.acquire().await;
         let conn = conn_result
             .as_mut()
-            .map_err(|e| error::Error::from(anyhow!("failed to acquire connection")))?;
+            .map_err(|_| error::Error::from(anyhow!("failed to acquire connection")))?;
 
         let (name, email) = Account::fetch_email(self.to, conn)
             .await

@@ -235,7 +235,7 @@ impl Account {
     // pub async fn register(form: &NewAccount, mut db: AppDbConnection) -> error::Result<i32> {
     pub async fn register<'a>(account: &NewAccount<'a>, db: &mut sqlx::PgConnection) -> error::Result<i32> {
         // TODO 101: return InvalidPassword if password is empty
-        let password = hasher::make_password(&account.password);
+        let password = hasher::make_password(account.password);
 
         Ok(sqlx::query!(
             "

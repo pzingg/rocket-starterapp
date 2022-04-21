@@ -2,7 +2,7 @@
 
 use std::env;
 use std::fmt::Debug;
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::{Arc, RwLock};
 use std::time::Duration;
 
 use anyhow::anyhow;
@@ -54,13 +54,17 @@ enum PostgresJobStatus {
 #[derive(sqlx::FromRow, Debug, Clone)]
 struct PostgresJob {
     id: Uuid,
-    created_at: chrono::DateTime<chrono::Utc>,
-    updated_at: chrono::DateTime<chrono::Utc>,
-
-    scheduled_for: chrono::DateTime<chrono::Utc>,
-    failed_attempts: i32,
-    status: PostgresJobStatus,
     message: Json<Message>,
+    #[allow(dead_code)]
+    created_at: chrono::DateTime<chrono::Utc>,
+    #[allow(dead_code)]
+    updated_at: chrono::DateTime<chrono::Utc>,
+    #[allow(dead_code)]
+    scheduled_for: chrono::DateTime<chrono::Utc>,
+    #[allow(dead_code)]
+    failed_attempts: i32,
+    #[allow(dead_code)]
+    status: PostgresJobStatus,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -116,7 +120,7 @@ impl PostgresQueue {
             (id, created_at, updated_at, scheduled_for, failed_attempts, status, message)
             VALUES ($1, $2, $3, $4, $5, $6, $7)";
 
-        sqlx::query(query)
+        let query_result = sqlx::query(query)
             .bind(job_id)
             .bind(now)
             .bind(now)
@@ -127,8 +131,13 @@ impl PostgresQueue {
             .execute(&self.pool)
             .await?;
 
-        rocket::info!("pushed job {:?}", job);
-        Ok(())
+        if query_result.rows_affected() > 0 {
+            rocket::info!("pushed job {}", job_id);
+            Ok(())
+        } else {
+            rocket::error!("failed to push job {}", job_id);
+            Err(anyhow!("job insertion error").into())
+        }
     }
 
     /// pull fetches at most `number_of_jobs` from the queue.
@@ -202,7 +211,7 @@ async fn run_worker(queue: PostgresQueue) {
         let jobs = match queue.pull(CONCURRENCY as u32).await {
             Ok(jobs) => jobs,
             Err(err) => {
-                println!("run_worker: pulling jobs: {}", err);
+                rocket::error!("error pulling jobs: {}", err);
                 rocket::tokio::time::sleep(Duration::from_millis(QUEUE_EMPTY_DELAY)).await;
                 Vec::new()
             }
@@ -210,7 +219,7 @@ async fn run_worker(queue: PostgresQueue) {
 
         let number_of_jobs = jobs.len();
         if number_of_jobs > 0 {
-            println!("Fetched {} jobs", number_of_jobs);
+            rocket::info!("fetched {} jobs", number_of_jobs);
         }
 
         stream::iter(jobs)
@@ -218,11 +227,11 @@ async fn run_worker(queue: PostgresQueue) {
                 let job_id = job.id;
                 let res = match handle_job(job, &queue).await {
                     Ok(_) => {
-                        println!("run_worker: job({}) was handled successfully", job_id);
+                        rocket::info!("job({}) was handled successfully", job_id);
                         queue.delete_job(job_id).await
                     },
                     Err(err) => {
-                        println!("run_worker: handling job({}): {}", job_id, &err);
+                        rocket::error!("error handling job({}): {}", job_id, &err);
                         queue.fail_job(job_id).await
                     }
                 };
@@ -230,7 +239,7 @@ async fn run_worker(queue: PostgresQueue) {
                 match res {
                     Ok(_) => {}
                     Err(err) => {
-                        println!("run_worker: deleting / failing job: {}", &err);
+                        rocket::error!("error deleting / failing job: {}", &err);
                     }
                 }
             })
@@ -379,12 +388,12 @@ impl Fairing for BackgroundQueue {
                         Ok(rocket.manage(queue))
                     },
                     Err(e) => {
-                        log::error!("background_jobs failed to load templates: {}", e);
+                        rocket::error!("background_jobs failed to load templates: {}", e);
                         Err(rocket)
                     }
             },
             Err(e) => {
-                log::error!("background_jobs failed to connect to db: {}", e);
+                rocket::error!("background_jobs failed to connect to db: {}", e);
                 Err(rocket)
             }
         }
@@ -397,10 +406,10 @@ impl Fairing for BackgroundQueue {
                 // queue is an Arc pointer, so this just copies the reference
                 let worker_queue = queue.clone();
                 let _queue_task_handle = rocket::tokio::spawn(async move { run_worker(worker_queue).await });
-                log::info!("job queue worker task spawned");
+                rocket::info!("job queue worker task spawned");
             }
             None => {
-                log::error!("could not fetch job queue");
+                rocket::error!("could not fetch job queue");
             }
         }
     }
@@ -416,7 +425,7 @@ impl<'r> FromRequest<'r> for PostgresQueue {
                 Outcome::Success(queue.clone())
             }
             None => {
-                log::error!("could not fetch job queue");
+                rocket::error!("could not fetch job queue");
                 Outcome::Failure((Status::InternalServerError,
                     error::Error::from(anyhow!("could not fetch job queue"))))
             }

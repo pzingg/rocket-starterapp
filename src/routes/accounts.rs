@@ -1,9 +1,7 @@
 //! Accounts routes, mounted at "/accounts"
 
-use std::sync::Arc;
-
 use rocket::{get, post};
-use rocket::form::{Form, Contextual, FromForm, Options, Context};
+use rocket::form::{Context, Contextual, Form, FromForm};
 use rocket::http::CookieJar;
 use rocket::request::FlashMessage;
 use rocket::response::Redirect;
