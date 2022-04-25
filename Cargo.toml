@@ -26,6 +26,7 @@ rand = "*"
 radix = "0.6"
 serde = "1.0"
 serde_json = "1.0"
+serde_urlencoded = "0.7"
 sha2 = "0.9"
 sqlx = { version = "0.5.9", default-features = false, features = ["runtime-tokio-rustls", "postgres", "chrono", "json", "macros", "uuid"] }
 tera = "1.5"

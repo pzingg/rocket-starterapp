@@ -2124,6 +2124,7 @@ dependencies = [
  "rocket_dyn_templates",
  "serde",
  "serde_json",
+ "serde_urlencoded",
  "sha2 0.9.9",
  "sqlx",
  "tera",

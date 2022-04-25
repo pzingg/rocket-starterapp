@@ -13,8 +13,7 @@ use crate::models::Account;
 /// has been verified.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SendWelcomeAccountEmail {
-    // TODO 102: use a more specific type for account ids
-    pub to: i32,
+    pub to: String,
 }
 
 pub fn build_context(name: &str) -> Context {
@@ -35,15 +34,15 @@ impl JobRun for SendWelcomeAccountEmail {
             .as_mut()
             .map_err(|_| error::Error::from(anyhow!("failed to acquire connection")))?;
 
-        let (name, email) = Account::fetch_email(self.to, conn)
+        let account = Account::get_by_email(&self.to, conn)
             .await
             .map_err(|e| anyhow!("Error fetching user name/email: {:?}", e))?;
 
         let email = Email::new(
             "welcome",
-            &[email],
+            &[account.email],
             "Welcome to the service",
-            build_context(&name),
+            build_context(&account.name),
             state.templates.clone(),
         );
 

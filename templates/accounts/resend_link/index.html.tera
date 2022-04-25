@@ -1,17 +1,17 @@
 {% import "macros" as m %}
 {% extends "layout" %}
 
-{% block title %}Reset Your Password{% endblock %}
+{% block title %}Verify Your Email Address{% endblock %}
 
 {% block content %}
-<h1>Reset Your Password</h1>
-<form id="request-reset-password-form" method="POST" action="/accounts/reset">
+<h1>Enter Your Email Address</h1>
+<form id="request-resend-link-form" method="POST" action="/accounts/resend">
     <p>
         <label for="email">Email Address:</label>
         <input id="email" name="account.email" type="text" value="{{ m::value_for(name="account.email") }}">
         {{ m::errors_for(name="account.email") }}
     </p>
 
-    <button class="submit">Reset</button>
+    <button class="submit">Verify Email Address</button>
 </form>
 {% endblock %}

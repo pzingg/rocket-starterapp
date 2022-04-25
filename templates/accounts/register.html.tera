@@ -6,20 +6,20 @@
 {% block content %}
 <h1>Sign Up</h1>
 
-<form action="/accounts/register" method="POST">
+<form id="registration-form" action="/accounts/register" method="POST">
     <p>
         <label for="name">Your Name:</label>
-        <input name="account.name" type="text" value="{{ m::value_for(name="account.name") }}">
+        <input id="name" name="account.name" type="text" value="{{ m::value_for(name="account.name") }}">
         {{ m::errors_for(name="account.name") }}
     </p>
     <p>
         <label for="email">Email:</label>
-        <input name="account.email" type="email" value="{{ m::value_for(name="account.email") }}">
+        <input id="email" name="account.email" type="email" value="{{ m::value_for(name="account.email") }}">
         {{ m::errors_for(name="account.email") }}
     </p>
     <p>
         <label for="password">Password:</label>
-        <input name="account.password" type="password">
+        <input id="password" name="account.password" type="password">
         {{ m::errors_for(name="account.password") }}
     </p>
 

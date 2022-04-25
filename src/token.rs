@@ -5,7 +5,6 @@ use chrono::{TimeZone, Utc};
 use constant_time_eq::constant_time_eq;
 use hmac::{Hmac, Mac, NewMac};
 use radix::RadixNum;
-use serde::Deserialize;
 use sha2::Sha256;
 
 use rocket::request::FromParam;
@@ -17,7 +16,7 @@ type HmacSha256 = Hmac<Sha256>;
 
 const KEY_SALT: &str = "com.jelly.accounts.token_generator";
 
-#[derive(Debug, Default, Deserialize)]
+#[derive(Debug, Default)]
 pub struct UserToken {
     pub uidb64: Option<String>,
     pub ts: String,

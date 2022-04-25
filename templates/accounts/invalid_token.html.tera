@@ -4,4 +4,6 @@
 
 {% block content %}
 <h1>Invalid or Expired</h1>
+<p>Sorry, the link you used was invalid or expired.</p>
+<p><a href="#">Request a new link</a></p>
 {% endblock %}

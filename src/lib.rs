@@ -3,9 +3,9 @@ use rocket_db_pools::Database;
 use rocket_dyn_templates::Template;
 
 pub mod auth;
-pub mod error;
 pub mod database;
 pub mod email;
+pub mod error;
 pub mod jobs;
 pub mod models;
 #[cfg(feature = "oauth")]

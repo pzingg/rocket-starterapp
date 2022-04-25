@@ -12,7 +12,7 @@ use crate::token::OneTimeUseTokenGenerator;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SendVerifyAccountEmail {
-    pub to: i32,
+    pub to: String,
 }
 
 pub fn build_context(verify_url: &str) -> Context {
@@ -29,30 +29,32 @@ impl JobRun for SendVerifyAccountEmail {
             .as_mut()
             .map_err(|_| error::Error::from(anyhow!("failed to acquire connection")))?;
 
-        let account = Account::get(self.to, conn)
+        let account = Account::get_by_email(&self.to, conn)
             .await
             .map_err(|e| anyhow!("Error fetching account for verification: {:?}", e))?;
 
-        let domain = env::var("JELLY_DOMAIN").expect("No JELLY_DOMAIN value set!");
+        if !account.has_verified_email {
+            let domain = env::var("JELLY_DOMAIN").expect("No JELLY_DOMAIN value set!");
 
-        let verify_url = format!(
-            "{}/accounts/verify/{}-{}",
-            domain,
-            base64_url::encode(&format!("{}", account.id)),
-            account
-                .create_reset_token()
-                .map_err(|e| { anyhow!("Error creating verification token: {:?}", e) })?
-        );
+            let verify_url = format!(
+                "{}/accounts/verify/{}-{}",
+                domain,
+                base64_url::encode(&format!("{}", account.id)),
+                account
+                    .create_reset_token()
+                    .map_err(|e| { anyhow!("Error creating verification token: {:?}", e) })?
+            );
 
-        let email = Email::new(
-            "verify-account",
-            &[account.email],
-            "Verify your new account",
-            build_context(&verify_url),
-            state.templates.clone(),
-        );
+            let email = Email::new(
+                "verify-account",
+                &[account.email],
+                "Verify your new account",
+                build_context(&verify_url),
+                state.templates.clone(),
+            );
 
-        email?.send()?;
+            email?.send()?;
+        }
 
         Ok(())
     }

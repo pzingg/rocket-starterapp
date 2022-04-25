@@ -102,13 +102,12 @@ impl Account {
         /// the user to avoid leaking information.
     pub async fn validate_token(
         token: &UserToken,
-        mut db: AppDbConnection,
+        conn: &mut sqlx::PgConnection,
     ) -> error::Result<Self> {
         if let Some(uidb64) = &token.uidb64 {
             if let Ok(uid_bytes) = base64_url::decode(&uidb64) {
                 if let Ok(uid_str) = std::str::from_utf8(&uid_bytes) {
                     if let Ok(uid) = uid_str.parse::<i32>() {
-                        let conn: &mut sqlx::PgConnection = db.as_mut();
                         if let Ok(account) = Self::get(uid, conn).await {
                             if account.is_token_valid(&token.as_anonymous_string()) {
                                 return Ok(account);
@@ -122,7 +121,7 @@ impl Account {
         Err(error::Error::with_status(anyhow!("invalid token"), Status::BadRequest))
     }
 
-    pub async fn count(mut db: AppDbConnection) -> error::Result<i64> {
+    pub async fn count(conn: &mut sqlx::PgConnection) -> error::Result<i64> {
         Ok(sqlx::query!(
             "
             SELECT
@@ -130,13 +129,13 @@ impl Account {
             FROM accounts
         "
         )
-        .fetch_one(&mut *db)
+        .fetch_one(conn)
         .await?
         .count
         .unwrap())
     }
 
-    pub async fn get(id: i32, db: &mut sqlx::PgConnection) -> error::Result<Self> {
+    pub async fn get(id: i32, conn: &mut sqlx::PgConnection) -> error::Result<Self> {
         Ok(sqlx::query_as_unchecked!(
             Account,
             "
@@ -148,11 +147,11 @@ impl Account {
         ",
             id
         )
-        .fetch_one(db)
+        .fetch_one(conn)
         .await?)
     }
 
-    pub async fn get_by_email(email: &str, db: &mut sqlx::PgConnection) -> error::Result<Self> {
+    pub async fn get_by_email(email: &str, conn: &mut sqlx::PgConnection) -> error::Result<Self> {
         Ok(sqlx::query_as_unchecked!(
             Account,
             "
@@ -164,11 +163,11 @@ impl Account {
         ",
             email
         )
-        .fetch_one(db)
+        .fetch_one(conn)
         .await?)
     }
 
-    pub async fn id_by_email(email: &str, db: &mut sqlx::PgConnection) -> error::Result<i32> {
+    pub async fn id_by_email(email: &str, conn: &mut sqlx::PgConnection) -> error::Result<i32> {
         Ok(sqlx::query!(
             "
             SELECT id
@@ -176,12 +175,12 @@ impl Account {
         ",
             email
         )
-        .fetch_one(db)
+        .fetch_one(conn)
         .await?
         .id)
     }
 
-    pub async fn authenticate(form: &LoginData, db: &mut sqlx::PgConnection) -> error::Result<User> {
+    pub async fn authenticate(form: &LoginData<'_>, conn: &mut sqlx::PgConnection) -> error::Result<User> {
         let user = sqlx::query_as_unchecked!(
             UserPass,
             "
@@ -191,10 +190,10 @@ impl Account {
         ",
             form.email
         )
-        .fetch_one(db)
+        .fetch_one(conn)
         .await?;
 
-        user.check_password(&form.password)?;
+        user.check_password(form.password)?;
 
         Ok(User {
             id: user.id,
@@ -204,36 +203,21 @@ impl Account {
         })
     }
 
-    pub async fn fetch_email(id: i32, db: &mut sqlx::PgConnection) -> error::Result<(String, String)> {
-        let data = sqlx::query!(
-            "
-            SELECT
-                name, email
-            FROM accounts WHERE id = $1
-        ",
-            id
-        )
-        .fetch_one(db)
-        .await?;
-
-        Ok((data.name, data.email))
-    }
-
-    pub async fn fetch_name_from_email(email: &str, db: &mut sqlx::PgConnection) -> error::Result<String> {
+    pub async fn fetch_name_from_email(email: &str, conn: &mut sqlx::PgConnection) -> error::Result<String> {
         let data = sqlx::query!(
             "
             SELECT name FROM accounts WHERE email = $1
         ",
             email
         )
-        .fetch_one(db)
+        .fetch_one(conn)
         .await?;
 
         Ok(data.name)
     }
 
     // pub async fn register(form: &NewAccount, mut db: AppDbConnection) -> error::Result<i32> {
-    pub async fn register<'a>(account: &NewAccount<'a>, db: &mut sqlx::PgConnection) -> error::Result<i32> {
+    pub async fn register<'a>(account: &NewAccount<'a>, conn: &mut sqlx::PgConnection) -> error::Result<String> {
         // TODO 101: return InvalidPassword if password is empty
         let password = hasher::make_password(account.password);
 
@@ -241,18 +225,18 @@ impl Account {
             "
             INSERT INTO accounts (name, email, password)
             VALUES ($1, $2, $3)
-            RETURNING id
+            RETURNING email
         ",
             account.name,
             account.email,
             password
         )
-        .fetch_one(db)
+        .fetch_one(conn)
         .await?
-        .id)
+        .email)
     }
 
-    pub async fn mark_verified(id: i32, db: &mut sqlx::PgConnection) -> error::Result<()> {
+    pub async fn mark_verified(id: i32, conn: &mut sqlx::PgConnection) -> error::Result<()> {
         sqlx::query!(
             "
             UPDATE accounts
@@ -261,13 +245,13 @@ impl Account {
         ",
             id
         )
-        .execute(db)
+        .execute(conn)
         .await?;
 
         Ok(())
     }
 
-    pub async fn update_last_login(id: i32, db: &mut sqlx::PgConnection) -> error::Result<()> {
+    pub async fn update_last_login(id: i32, conn: &mut sqlx::PgConnection) -> error::Result<()> {
         sqlx::query!(
             "
             UPDATE accounts
@@ -276,7 +260,7 @@ impl Account {
         ",
             id
         )
-        .execute(db)
+        .execute(conn)
         .await?;
 
         Ok(())
@@ -285,7 +269,7 @@ impl Account {
     pub async fn update_password_and_last_login(
         id: i32,
         password: &str,
-        db: &mut sqlx::PgConnection,
+        conn: &mut sqlx::PgConnection,
     ) -> error::Result<()> {
         // TODO 101: return InvalidPassword if password is empty
         let password = hasher::make_password(password);
@@ -299,7 +283,7 @@ impl Account {
             id,
             password
         )
-        .execute(db)
+        .execute(conn)
         .await?;
 
         Ok(())
@@ -309,10 +293,10 @@ impl Account {
         form: LinkIdentityData,
         refresh_token: Option<String>,
         current_account_id: Option<i32>,
-        db: &mut sqlx::PgConnection,
+        conn: &mut sqlx::PgConnection,
     ) -> error::Result<User> {
-        let tx = db.begin().await?;
-        handle_merge(form, refresh_token, current_account_id, tx).await
+        let transaction = conn.begin().await?;
+        handle_merge(form, refresh_token, current_account_id, transaction).await
     }
 }
 

@@ -3,24 +3,25 @@
 use std::collections::HashSet;
 
 use fancy_regex::Regex;
-use rocket::form::{FromForm, FromFormField};
+use rocket::form;
+use rocket::form::{Error, Errors, FromFormField};
 use serde::{Deserialize, Serialize};
+use zxcvbn::zxcvbn;
 
-/// Part of the [`PasswordPolicy`] that determines validity
-/// for new passwords. [`pattern`] is the regex that the
+/// For validating passwords. [`pattern`] is the regex that the
 /// password must match, and [`message`] is the user-facing
 /// error message that will be presented if the password does
 /// match the regex.
-#[derive(Clone, Debug, Deserialize, FromForm, Serialize)]
+#[derive(Clone)]
 pub struct RegexConfig {
-    pattern: String,
+    pattern: Regex,
     message: String,
 }
 
 impl RegexConfig {
     fn new(pattern: &str, message: &str) -> Self {
         RegexConfig {
-            pattern: pattern.to_owned(),
+            pattern: Regex::new(pattern).unwrap(),
             message: message.to_owned(),
         }
     }
@@ -60,36 +61,6 @@ pub enum PasswordScore {
     VeryUnguessable = 4,   // strong protection from offline slow-hash scenario. (guesses >= 10^10)
 }
 
-/// Besides being required, you can set three more
-/// validations on new passwords, by setting these fields
-/// to a `Some` value:
-///
-/// * [`length`]:   Some((min_length, max_length))
-/// * [`regex`]:    Some(regex_config) -- see the description and two
-///    predefined statics for the [`RegexConfig`] struct
-/// * [`strength`]: Some(min_password_score) -- see the description for
-///    the [`PasswordScore`] enum. Usually you want a minimum score
-///    of SafelyUnguessable
-///
-/// If any of these are set to a Some value, the password
-/// will be validated against the optional argument.
-#[derive(Clone, Debug, FromForm, Serialize, Deserialize)]
-pub struct PasswordPolicy {
-    length: Option<(usize, usize)>,
-    regex: Option<RegexConfig>,
-    strength: Option<PasswordScore>,
-}
-
-impl Default for PasswordPolicy {
-    fn default() -> Self {
-        PasswordPolicy {
-            length: Some((8, 255)),
-            regex: Some(REGEX_ANH.clone()),
-            strength: Some(PasswordScore::SafelyUnguessable),
-        }
-    }
-}
-
 /// Pulls out non-duplicated words of four or more characters
 /// from a list of inputs. Words are converted to lowercase
 /// before testing for duplicates. The results are used
@@ -106,13 +77,13 @@ impl Default for PasswordPolicy {
 /// let result = split_inputs(user_inputs);
 /// assert_eq!(result, vec!["jeffry", "bezos", "jbezos", "amazon"])
 /// ```
-pub fn split_inputs(inputs: &[&str]) -> Vec<String> {
+fn split_inputs<T: AsRef<str>>(inputs: &[T]) -> Vec<String> {
     let splitter = Regex::new(r#"\W"#).unwrap();
     let mut uniques: HashSet<String> = HashSet::new();
     let mut result: Vec<String> = Vec::new();
     for input in inputs {
         let words: Vec<String> = splitter
-            .replace_all(*input, " ")
+            .replace_all(input.as_ref(), " ")
             .split(' ')
             .filter(|w| w.len() > 3)
             .map(|w| w.to_lowercase())
@@ -125,4 +96,57 @@ pub fn split_inputs(inputs: &[&str]) -> Vec<String> {
         }
     }
     result
+}
+
+/// Validate password against fancy regex.
+pub fn validate_pattern<'v>(
+    password: &'v str,
+    config: &'v RegexConfig,
+) -> form::Result<'v, ()> {
+    match config.pattern.is_match(password) {
+        Err(_) => Err(Error::validation("bad pattern").into()),
+        Ok(true) => Ok(()),
+        Ok(_) => Err(Error::validation(&config.message).into()),
+    }
+}
+
+/// Validate password strength using zxcvbn algorithm.
+pub fn validate_strength<'v, T: AsRef<str>>(
+    password: &'v str,
+    strength: PasswordScore,
+    user_inputs: &[T],
+) -> form::Result<'v, ()> {
+    let words = split_inputs(user_inputs);
+    match zxcvbn(
+        password,
+        words
+            .iter()
+            .map(|s| s.as_ref())
+            .collect::<Vec<&str>>()
+            .as_slice(),
+    ) {
+        Err(_) => Err(Error::validation("cannot be blank").into()),
+        Ok(estimate) if estimate.score() >= strength as u8 => Ok(()),
+        Ok(estimate) => {
+            let mut errors = Errors::new();
+            match estimate.feedback() {
+                Some(feedback) => {
+                    let message = feedback
+                        .warning()
+                        .map(|w| w.to_string())
+                        .unwrap_or_else(|| "not strong enough".to_string());
+
+                    errors.push(Error::validation(message));
+
+                    feedback
+                        .suggestions()
+                        .iter()
+                        .for_each(|s| errors.push(Error::validation(s.to_string())));
+                },
+                None => errors.push(Error::validation("not strong enough")),
+            }
+
+            Err(errors)
+        }
+    }
 }

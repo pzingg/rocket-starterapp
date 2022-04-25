@@ -1,3 +1,4 @@
+{% import "macros" as m %}
 {% extends "layout" %}
 
 {% block title %}Login{% endblock %}
@@ -5,35 +6,24 @@
 {% block content %}
 <h1>Login with password</h1>
 
-<form action="/accounts/login" method="POST" id="loginform">
-    {% if errors and errors is containing("form") %}
-    <p>
-    {% for e in errors["form"] %}
-        <span>{{ e["message"] }}</span>
-    {% endfor %}
-    </p>
-    {% endif %}
-
+<form id="login-form" action="/accounts/login" method="POST">
     <p>
         <label for="email">Email:</label>
-        <input name="email" type="email" value="{{ form.email }}">
-        {% if errors and errors is containing("email") %}
-        {% for e in errors["email"] %}
-            <span>{{ e["message"] }}</span>
-        {% endfor %}
-        {% endif %}
+        <input id="email" name="account.email" type="email" value="{{ m::value_for(name="account.email") }}">
+        {{ m::errors_for(name="account.email") }}
     </p>
     <p>
         <label for="password">Password:</label>
-        <input name="password" type="password">
-        {% if errors and errors is containing("password") %}
-        {% for e in errors["password"] %}
-            <span>{{ e["message"] }}</span>
-        {% endfor %}
-        {% endif %}
-
+        <input id="password" name="account.password" type="password">
+        {{ m::errors_for(name="account.password") }}
+    </p>
+    <p>
+        <a href="/accounts/resend" title="Resend Verification">Verify your account?</a>
+    </p>
+    <p>
         <a href="/accounts/reset" title="Reset Your Password">Forgot your password?</a>
     </p>
+
     <button type="submit">Login</button>
 </form>
 

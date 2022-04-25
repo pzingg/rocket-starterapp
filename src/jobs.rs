@@ -38,8 +38,8 @@ pub enum Message {
     SendResetPasswordEmail(String),
     SendPasswordWasResetEmail(String),
     SendAccountOddRegisterAttemptEmail(String),
-    SendVerifyAccountEmail(i32),
-    SendWelcomeAccountEmail(i32),
+    SendVerifyAccountEmail(String),
+    SendWelcomeAccountEmail(String),
 }
 
 // We use a INT as Postgres representation for performance reasons
@@ -258,10 +258,10 @@ async fn handle_job(job: Job, state: &PostgresQueue) -> error::Result<()> {
             SendPasswordWasResetEmail { to: email }.run(state).await,
         Message::SendAccountOddRegisterAttemptEmail(email) =>
             SendAccountOddRegisterAttemptEmail { to: email }.run(state).await,
-        Message::SendVerifyAccountEmail(uid) =>
-            SendVerifyAccountEmail { to: uid }.run(state).await,
-        Message::SendWelcomeAccountEmail(uid) =>
-            SendWelcomeAccountEmail { to: uid }.run(state).await,
+        Message::SendVerifyAccountEmail(email) =>
+            SendVerifyAccountEmail { to: email }.run(state).await,
+        Message::SendWelcomeAccountEmail(email) =>
+            SendWelcomeAccountEmail { to: email }.run(state).await,
     }
 }
 

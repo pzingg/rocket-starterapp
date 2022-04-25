@@ -16,8 +16,12 @@ pub fn is_authenticated(cookies: &CookieJar) -> bool {
 }
 
 pub fn set_user(cookies: &CookieJar, user: User) {
-    cookies
-        .add_private(Cookie::new("sku", serde_json::json!(user).to_string()));
+    cookies.add_private(
+        Cookie::new("sku", serde_json::json!(user).to_string()));
+}
+
+pub fn clear_user(cookies: &CookieJar) {
+    cookies.remove_private(Cookie::named("sku"));
 }
 
 pub fn user(cookies: &CookieJar) -> error::Result<User> {
